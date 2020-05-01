@@ -16,18 +16,18 @@ public class ServerClientHandler extends Thread{
         this.user = user;
     }
 
-    public void connect() {
+    public void run() {
         try {
-            System.out.println(user + "connected on " + s);
+            System.out.println(user + " has connected on " + s);
             BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()));
             PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true);
             String message;
             while ((message = clientIn.readLine()) != null) {
-                System.out.println("Server has received " + message);
+                System.out.println(user + " has sent: " + message);
                 if (message.equals("quit")) {
                     System.out.println("Session has ended for " + user);
                 }
-                clientOut.println(message);
+                clientOut.println("sent");
                 clientOut.flush();
                 System.out.println("Server has sent a message to " + s);
             }

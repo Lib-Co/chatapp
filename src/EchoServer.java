@@ -23,7 +23,7 @@ public class EchoServer extends Thread{
         try {
             while(true) {
                 Socket s = in.accept();
-                new ServerClientHandler(s, "client" + i).start();
+                new ServerClientHandler(s, "Client " + i).start();
                 i++;
             }
         } catch (IOException e) {
