@@ -8,6 +8,10 @@ public class ChatClient {
 
     private Socket server;
 
+    private boolean isConnected() {
+        return false;
+    }
+
     public ChatClient(String address, int port){
         try {
             server = new Socket(address, port);
@@ -25,12 +29,9 @@ public class ChatClient {
             while (!in.equals("quit")) {
                 in = userIn.readLine();
                 serverOut.println(in);
-                String back = serverIn.readLine();
-                System.out.println(back);
             }
-            if (in.equals("quit")){
-                System.out.println("Program Terminated");
-            }
+            System.out.println("Program Terminated");
+
 
         } catch (IOException e) {
             e.printStackTrace();

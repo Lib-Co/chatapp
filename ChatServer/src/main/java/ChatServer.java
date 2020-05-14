@@ -3,13 +3,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 
-public class ChatServer extends Thread {
+public class ChatServer extends Thread implements MessageProcessor {
 
-    //
     private ServerSocket in;
     private int i;
+    private List<ServerClientHandler> clients = new ArrayList<>();
 
     private Boolean exit;
 
@@ -31,7 +33,6 @@ public class ChatServer extends Thread {
                             System.out.println(("Server commencing exit"));
                             synchronized (exit) {
                                 exit = true;
-                                break;
                             }
                         }
                     }
@@ -45,6 +46,11 @@ public class ChatServer extends Thread {
         }
     }
 
+    // Method to retrieve message from ServerClientHandler and add to message store
+    public synchronized void processMessage(Message message) {
+        System.out.println(message.arrivalTime.toString() + " " + message.data);
+    }
+
     //thread safe: blocks multiple threads accessing it at same time
     public synchronized boolean getExit() {
         return exit;
@@ -55,7 +61,9 @@ public class ChatServer extends Thread {
         try {
             while (!getExit()) {
                 Socket s = in.accept();
-                new ServerClientHandler(s, "Client " + i).start();
+                ServerClientHandler c = new ServerClientHandler(s, "Client " + i, this);
+                c.start();
+                clients.add(c);
                 i++;
             }
 
