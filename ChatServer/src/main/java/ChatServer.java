@@ -3,8 +3,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 
 public class ChatServer extends Thread implements MessageProcessor {
@@ -12,6 +11,7 @@ public class ChatServer extends Thread implements MessageProcessor {
     private ServerSocket in;
     private int i;
     private List<ServerClientHandler> clients = new ArrayList<>();
+    private Map<Integer, Queue<Message>> messageQueueMap = new HashMap<>();
 
     private Boolean exit;
 
@@ -19,7 +19,7 @@ public class ChatServer extends Thread implements MessageProcessor {
     public ChatServer(int port) {
         try {
             in = new ServerSocket(port);
-            i = 1;
+            i = 0;
             exit = false;
 
             //creating new thread to listen for "exit" on server
@@ -48,6 +48,7 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     // Method to retrieve message from ServerClientHandler and add to message store
     public synchronized void processMessage(Message message) {
+        messageQueueMap.getOrDefault(message.id, new LinkedList<>()).add(message);
         System.out.println(message.arrivalTime.toString() + " " + message.data);
     }
 
