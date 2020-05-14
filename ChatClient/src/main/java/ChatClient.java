@@ -4,11 +4,11 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class EchoClient {
+public class ChatClient {
 
     private Socket server;
 
-    public EchoClient(String address, int port){
+    public ChatClient(String address, int port){
         try {
             server = new Socket(address, port);
         } catch (IOException e) {
@@ -36,6 +36,9 @@ public class EchoClient {
     }
 
     public static void main(String[] args) {
-        new EchoClient("localhost", 14001).connect();
+        new ChatClient("localhost", 14001).connect();
     }
 }
+
+// closing the client cleanly = terminal input "quit"
+// need to tell server so server gets rid of the connection to close socket
