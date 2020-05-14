@@ -22,14 +22,16 @@ public class ChatClient {
             PrintWriter serverOut = new PrintWriter(server.getOutputStream(), true);
             BufferedReader serverIn = new BufferedReader(new InputStreamReader(server.getInputStream()));
             String in = "";
-            do {
+            while (!in.equals("quit")) {
                 in = userIn.readLine();
                 serverOut.println(in);
                 String back = serverIn.readLine();
                 System.out.println(back);
-            } while (!in.equals("quit"));
+            }
+            if (in.equals("quit")){
+                System.out.println("Program Terminated");
+            }
 
-            System.out.println("Program Terminated");
         } catch (IOException e) {
             e.printStackTrace();
         }

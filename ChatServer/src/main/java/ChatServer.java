@@ -11,7 +11,6 @@ public class ChatServer extends Thread {
     private ServerSocket in;
     private int i;
 
-    //
     private Boolean exit;
 
 
@@ -22,26 +21,24 @@ public class ChatServer extends Thread {
             exit = false;
 
             //creating new thread to listen for "exit" on server
-            new Thread() {
-                public void run() {
-                    try {
-                        BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in));
-                        while (true) {
-                            String in = userIn.readLine();
-                            if (in.equals("EXIT")) {
-                                //or can add synchronized block
-                                System.out.println(("Server commencing exit"));
-                                synchronized (exit) {
-                                    exit = true;
-                                    break;
-                                }
+            new Thread(() -> {
+                try {
+                    BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in));
+                    while (true) {
+                        String in = userIn.readLine();
+                        if (in.equals("EXIT")) {
+                            //or can add synchronized block
+                            System.out.println(("Server commencing exit"));
+                            synchronized (exit) {
+                                exit = true;
+                                break;
                             }
                         }
-                    } catch (IOException e) {
-                        e.printStackTrace();
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            }.start();
+            }).start();
 
         } catch (IOException e) {
             e.printStackTrace();
