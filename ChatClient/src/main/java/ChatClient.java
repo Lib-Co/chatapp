@@ -6,7 +6,7 @@ import java.net.Socket;
 
 public class ChatClient {
 
-    private Socket server;
+    private Socket clientSocket;
 
     private boolean isConnected() {
         return false;
@@ -14,29 +14,49 @@ public class ChatClient {
 
     public ChatClient(String address, int port){
         try {
-            server = new Socket(address, port);
+            clientSocket = new Socket(address, port);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void connect(){
-        try {
-            BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in));
-            PrintWriter serverOut = new PrintWriter(server.getOutputStream(), true);
-            BufferedReader serverIn = new BufferedReader(new InputStreamReader(server.getInputStream()));
-            String in = "";
-            while (!in.equals("quit")) {
-                in = userIn.readLine();
-                serverOut.println(in);
+
+        new Thread(() -> {
+            try {
+                BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in));
+                PrintWriter serverOut = new PrintWriter(clientSocket.getOutputStream(), true);
+                String in = "";
+                while (!in.equals("quit")) {
+                    in = userIn.readLine();
+                    serverOut.println(in);
+                }
+                System.out.println("Program Terminated");
+
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            System.out.println("Program Terminated");
+        }).start();
+
+        new Thread(() -> {
+            try {
+                BufferedReader serverIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                while (true) {
+                    String line = serverIn.readLine();
+                    System.out.println(line);
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }).start();
 
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
     }
+
+
 
     public static void main(String[] args) {
         new ChatClient("localhost", 14001).connect();

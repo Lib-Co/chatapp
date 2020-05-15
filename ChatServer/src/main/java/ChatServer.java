@@ -4,15 +4,15 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class ChatServer extends Thread implements MessageProcessor {
 
     private ServerSocket in;
     private int i;
-    private List<ServerClientHandler> clients = new ArrayList<>();
     private Map<Integer, Queue<Message>> messageQueueMap = new HashMap<>();
-
     private Boolean exit;
 
 
@@ -48,23 +48,35 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     // Method to retrieve message from ServerClientHandler and add to message store
     public synchronized void processMessage(Message message) {
-        messageQueueMap.getOrDefault(message.id, new LinkedList<>()).add(message);
-        System.out.println(message.arrivalTime.toString() + " " + message.data);
+        // Iterate through queues to check that message id does not equal id of message store before adding to list
+        for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
+            if (!queueEntry.getKey().equals(message.id)) {
+                queueEntry.getValue().add(message);
+            }
+            //System.out.println(message.arrivalTime.toString() + " " + message.data);
+        }
     }
+
+
+
+
 
     //thread safe: blocks multiple threads accessing it at same time
     public synchronized boolean getExit() {
         return exit;
     }
 
-    //accepting clients
+    // Accepting clients
+    // Creating a new ServerClientHandler for each new client and assigning Client number
+    //
     public void run() {
         try {
             while (!getExit()) {
                 Socket s = in.accept();
-                ServerClientHandler c = new ServerClientHandler(s, "Client " + i, this);
+                BlockingQueue<Message> broadcastQueue = new LinkedBlockingQueue<>();
+                ServerClientHandler c = new ServerClientHandler(s, "Client " + i, i,this, broadcastQueue);
+                messageQueueMap.put(i, broadcastQueue);
                 c.start();
-                clients.add(c);
                 i++;
             }
 
