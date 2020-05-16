@@ -30,9 +30,9 @@ public class ChatClient {
             try {
                 BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in));
                 PrintWriter serverOut = new PrintWriter(clientSocket.getOutputStream(), true);
-                String data = userIn.readLine();
-                while (!data.equals("quit")) {
-                    data = userIn.readLine() ;
+                boolean running = true;
+                while (running) {
+                    String data = userIn.readLine() ;
                     Message msg;
                     if (data.startsWith("@")) {
                         //get the following username
@@ -43,6 +43,7 @@ public class ChatClient {
                     }
                     else if (data.equals("quit")) {
                         msg = new Message(Message.Type.QUIT, user, data);
+                        running = false;
                     }
                     else {
                         msg = new Message(Message.Type.BROADCAST, user, data);

@@ -55,9 +55,9 @@ public class ChatServer extends Thread implements MessageProcessor {
         } else if (type == Message.Type.PRIVATE) {
             // Get the id of the intended recipient and add message to their queue only
             int recipient = message.id;
-            Queue<Message> recipeintQueue = messageQueueMap.get(recipient);
-            if (recipeintQueue != null) {
-                recipeintQueue.add(message);
+            Queue<Message> recipientQueue = messageQueueMap.get(recipient);
+            if (recipientQueue != null) {
+                recipientQueue.add(message);
             }
             // if private, use username to find client id, then add to this client's message queue
         } else if (type == Message.Type.BROADCAST) {
