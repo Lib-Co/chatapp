@@ -13,6 +13,7 @@
     <modules>
         <module>ChatClient</module>
         <module>ChatServer</module>
+        <module>Data</module>
     </modules>
 
     <properties>

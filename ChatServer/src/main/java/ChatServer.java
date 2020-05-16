@@ -48,18 +48,33 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     // Method to retrieve message from ServerClientHandler and add to message store
     public synchronized void processMessage(Message message) {
-        // Iterate through queues to check that message id does not equal id of message store before adding to list
-        for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
-            if (!queueEntry.getKey().equals(message.id)) {
-                queueEntry.getValue().add(message);
+        // check the message Type
+        Message.Type type = message.messageType;
+        if (type == Message.Type.QUIT) {
+            // call new method to close client socket
+        } else if (type == Message.Type.PRIVATE) {
+            // Get the id of the intended recipient and add message to their queue only
+            int recipient = message.id;
+            Queue<Message> recipeintQueue = messageQueueMap.get(recipient);
+            if (recipeintQueue != null) {
+                recipeintQueue.add(message);
             }
+            // if private, use username to find client id, then add to this client's message queue
+        } else if (type == Message.Type.BROADCAST) {
+            // Iterate through queues to check that message id does not equal id of message store before adding to list
+            for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
+                if (!queueEntry.getKey().equals(message.id)) {
+                    queueEntry.getValue().add(message);
+                }
+
+            }
+            // if broadcast , add to all other clients' queues apart from the sender's
+
+
             //System.out.println(message.arrivalTime.toString() + " " + message.data);
+            //message.messageType.equals(Message.Type.BROADCAST
         }
     }
-
-
-
-
 
     //thread safe: blocks multiple threads accessing it at same time
     public synchronized boolean getExit() {
@@ -74,7 +89,7 @@ public class ChatServer extends Thread implements MessageProcessor {
             while (!getExit()) {
                 Socket s = in.accept();
                 BlockingQueue<Message> broadcastQueue = new LinkedBlockingQueue<>();
-                ServerClientHandler c = new ServerClientHandler(s, "Client " + i, i,this, broadcastQueue);
+                ServerClientHandler c = new ServerClientHandler(s, "Client " + i, i, this, broadcastQueue);
                 messageQueueMap.put(i, broadcastQueue);
                 c.start();
                 i++;
@@ -84,7 +99,6 @@ public class ChatServer extends Thread implements MessageProcessor {
             e.printStackTrace();
         }
     }
-
 
     public static void main(String[] args) {
         new ChatServer(14001).start();

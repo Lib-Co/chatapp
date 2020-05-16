@@ -1,10 +1,13 @@
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 
-//allows multiple clients to connect
+// Allows multiple clients to connect
 public class ServerClientHandler extends Thread {
     private Socket s;
     private String user;
@@ -22,20 +25,19 @@ public class ServerClientHandler extends Thread {
         this.clientMessageQueue = cmq;
     }
 
-    //listening for messages and broadcasting to the client that sent it (not broadcasting to multiple clients)
-    //receives messages and sends sent back
+    // New thread
+    //
     public void run() {
         try {
             System.out.println(user + " has connected on " + s);
             BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()));
-            String data;
 
             new Thread(() -> {
                 try {
                     PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true);
                     while (true) {
                         Message message = clientMessageQueue.take();
-                        clientOut.println(user + " sent:  " + message.data);
+                        clientOut.println(user + ":  " + message.data);
                     }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
@@ -43,18 +45,21 @@ public class ServerClientHandler extends Thread {
 
             }).start();
 
-            /*
-            Need to separate out the reading in and sending out of messages
-             */
-            while ((data = clientIn.readLine()) != null) {
-                Instant arrivalTime = Instant.now();
-                Message message = new Message(data, arrivalTime, id);
-                System.out.println(arrivalTime + ": " + user + " has sent: " + data);
+            String json;
+            ObjectMapper mapMsg = new ObjectMapper ();
+
+            while ((json = clientIn.readLine()) != null) {
+                Message message = mapMsg.readValue(json, Message.class);
+                message.arrivalTime = Instant.now();
+                message.id = id;
+                System.out.println(user + ": " + json);
+                //Clients are able to end their session by entering "quit"
+                if (message.messageType.equals(Message.Type.QUIT)) {
+                //if (data.equals("quit")) {
+                    System.out.println("Session ending for " + user);
+                    break;
+                }
                 mp.processMessage(message);
-            }
-            //Clients are able to end their session by entering "quit"
-            if (data != null && data.equals("quit")) {
-                System.out.println("Session has ended for " + user);
             }
 
         } catch (IOException e) {
@@ -73,8 +78,6 @@ public class ServerClientHandler extends Thread {
         }
     }
 }
-
-
 
 // new to create new thread to wait for exit
 // so that it won't accept any new clients and will shut down existing sockets
