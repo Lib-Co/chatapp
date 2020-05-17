@@ -13,24 +13,21 @@ public class ChatServer extends Thread implements MessageProcessor {
     private ServerSocket in;
     private Map<String, Integer> userNameMap = new HashMap<>();
     private Map<Integer, Queue<Message>> messageQueueMap = new HashMap<>();
-    private Boolean exit;
+    private volatile boolean exit;
 
     public ChatServer(int port) {
         try {
             in = new ServerSocket(port);
-            exit = false;
 
             //creating new thread to listen for "exit" on server
             new Thread(() -> {
-                try {
-                    BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in));
+                try (BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in))) {
                     while (true) {
                         String in = userIn.readLine();
                         if (in.equals("EXIT")) {
                             System.out.println(("Server commencing exit"));
-                            synchronized (exit) {
-                                exit = true;
-                            }
+                            exit = true;
+                            notifyExit();
                         }
                     }
                 } catch (IOException e) {
@@ -78,12 +75,16 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     }
 
-    //thread safe: blocks multiple threads accessing it at same time
-    public synchronized boolean getExit() {
-//        Message exitNotify = new Message(Message.Type.BROADCAST, "ChatApp", "Server is shutting down, your connection will be closed shortly");
-//        for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
-//            queueEntry.getValue().add(exitNotify);
-//        }
+    private void notifyExit() throws IOException {
+        exit = true;
+        Message exitNotify = new Message(Message.Type.BROADCAST, "ChatApp", "Server is shutting down, your connection will be closed shortly");
+        for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
+            queueEntry.getValue().add(exitNotify);
+        }
+        in.close();
+    }
+
+    public boolean getExit() {
         return exit;
     }
 
@@ -93,7 +94,7 @@ public class ChatServer extends Thread implements MessageProcessor {
     public void run() {
         int currentID = 0;
         try {
-            while (!getExit()) {
+            while (!exit) {
                 Socket s = in.accept();
                 BlockingQueue<Message> broadcastQueue = new LinkedBlockingQueue<>();
                 ServerClientHandler c = new ServerClientHandler(currentID, s, this, broadcastQueue);

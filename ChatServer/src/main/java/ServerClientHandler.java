@@ -23,23 +23,24 @@ public class ServerClientHandler extends Thread {
 
     //
     public void run() {
-        try {
-            // Stream to be sent from the server to the client across the socket
-            new Thread(() -> {
-                try {
-                    PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true);
-                    while (true) {
-                        Message message = clientMessageQueue.take();
-                        clientOut.println(message.senderUsername + ":  " + message.data);
-                        //TODO: Need to break out of this loop
+
+        new Thread(() -> {
+            try (PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true)) {
+                while (true) {
+                    Message message = clientMessageQueue.take();
+                    clientOut.println(message.senderUsername + ":  " + message.data);
+                    if (message.senderUsername.equals("ChatApp") && message.messageType == Message.Type.BROADCAST) {
+                        break;
                     }
-                } catch (IOException | InterruptedException e) {
-                    e.printStackTrace();
                 }
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
 
-            }).start();
-
-            BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()));
+        try (BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()))) {
+            //Sending to client
+            // Stream to be sent from the server to the client across the socket
             String json;
             ObjectMapper mapMsg = new ObjectMapper();
 
@@ -62,7 +63,9 @@ public class ServerClientHandler extends Thread {
                 System.out.println("Closed: " + s);
             } catch (IOException e) {
                 System.out.println("Error closing socket for " + clientID);
+
             }
+
         }
     }
 }
