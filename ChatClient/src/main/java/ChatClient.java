@@ -10,11 +10,7 @@ public class ChatClient {
 
     private Socket clientSocket;
     String user;
-    boolean isConnected;
-
-    private boolean isConnected() {
-        return isConnected;
-    }
+    volatile boolean isConnected;
 
     public ChatClient(String host, int port, String user) {
         try {
@@ -39,8 +35,7 @@ public class ChatClient {
                 BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in));
                 PrintWriter serverOut = new PrintWriter(clientSocket.getOutputStream(), true);
                 sendLoginMessage(serverOut, mapMsg);
-                boolean running = true;
-                while (running && isConnected) {
+                while (isConnected) {
                     String data = userIn.readLine();
                     Message msg;
                     if (data.startsWith("@")) {
@@ -59,7 +54,6 @@ public class ChatClient {
                         msg = new Message(Message.Type.QUIT, user, data);
                         //temp measure to stop null print out after user types quit
                         isConnected = false;
-                        running = false;
                     }
                     else {
                         msg = new Message(Message.Type.BROADCAST, user, data);

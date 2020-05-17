@@ -3,6 +3,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -12,8 +13,9 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     private ServerSocket in;
     private Map<String, Integer> userNameMap = new HashMap<>();
+    private Map<Integer, ServerClientHandler> clientHandlers = new HashMap<>();
     private Map<Integer, Queue<Message>> messageQueueMap = new HashMap<>();
-    private volatile boolean exit;
+    private volatile boolean exit = false;
 
     public ChatServer(int port) {
         try {
@@ -26,8 +28,7 @@ public class ChatServer extends Thread implements MessageProcessor {
                         String in = userIn.readLine();
                         if (in.equals("EXIT")) {
                             System.out.println(("Server commencing exit"));
-                            exit = true;
-                            notifyExit();
+                            exit();
                         }
                     }
                 } catch (IOException e) {
@@ -40,14 +41,18 @@ public class ChatServer extends Thread implements MessageProcessor {
         }
     }
 
+    public boolean getExit() {
+        return exit;
+    }
+
     // Method to retrieve message from ServerClientHandler and add to message store
     public synchronized void processMessage(int clientID, Message message) {
         // check the message Type
         Message.Type type = message.messageType;
         switch (type) {
             case QUIT:
-                System.out.println("Session ending for " + message.senderUsername);
                 messageQueueMap.remove(clientID);
+                System.out.println(message.senderUsername + " has quit");
                 break;
             case PRIVATE:
                 System.out.println(message.senderUsername + ": " + message.data);
@@ -75,17 +80,18 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     }
 
-    private void notifyExit() throws IOException {
-        exit = true;
-        Message exitNotify = new Message(Message.Type.BROADCAST, "ChatApp", "Server is shutting down, your connection will be closed shortly");
-        for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
-            queueEntry.getValue().add(exitNotify);
-        }
-        in.close();
-    }
+//    private void notifyExit() throws IOException {
+//        exit = true;
+//        Message exitNotify = new Message(Message.Type.BROADCAST, "ChatApp", "Server is shutting down, your connection will be closed shortly");
+//        for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
+//            queueEntry.getValue().add(exitNotify);
+//        }
+//        in.close();
+//    }
 
-    public boolean getExit() {
-        return exit;
+    public void exit() throws IOException {
+        exit = true;
+        in.close();
     }
 
     // Accepting clients
@@ -98,11 +104,13 @@ public class ChatServer extends Thread implements MessageProcessor {
                 Socket s = in.accept();
                 BlockingQueue<Message> broadcastQueue = new LinkedBlockingQueue<>();
                 ServerClientHandler c = new ServerClientHandler(currentID, s, this, broadcastQueue);
+                clientHandlers.put(currentID, c);
                 messageQueueMap.put(currentID, broadcastQueue);
                 c.start();
                 currentID++;
             }
-
+        } catch (SocketException e) {
+            System.out.println("SERVER CLOSING");
         } catch (IOException e) {
             e.printStackTrace();
         }

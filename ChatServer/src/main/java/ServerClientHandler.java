@@ -2,8 +2,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.time.Instant;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 // Allows multiple clients to connect
 public class ServerClientHandler extends Thread {
@@ -11,6 +13,7 @@ public class ServerClientHandler extends Thread {
     private final int clientID;
     private final MessageProcessor mp;
     private final BlockingQueue<Message> clientMessageQueue;
+    private volatile boolean exit = true;
 
 
     //
@@ -21,18 +24,19 @@ public class ServerClientHandler extends Thread {
         this.clientMessageQueue = cmq;
     }
 
-    //
+
     public void run() {
 
         new Thread(() -> {
             try (PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true)) {
-                while (true) {
-                    Message message = clientMessageQueue.take();
-                    clientOut.println(message.senderUsername + ":  " + message.data);
-                    if (message.senderUsername.equals("ChatApp") && message.messageType == Message.Type.BROADCAST) {
-                        break;
+                while (!mp.getExit()) {
+                    Message message = clientMessageQueue.poll(10, TimeUnit.MILLISECONDS);
+                    if (message != null) {
+                        clientOut.println(message.senderUsername + ":  " + message.data);
                     }
                 }
+                //close socket
+                s.close();
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
@@ -52,7 +56,8 @@ public class ServerClientHandler extends Thread {
 //                System.out.println(user + ": " + json);
                 mp.processMessage(clientID, message);
             }
-
+        } catch (SocketException e) {
+            System.out.println("CLIENT " + this.clientID +  " DISCONNECTED");
         } catch (IOException e) {
             e.printStackTrace();
 
