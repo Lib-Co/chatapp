@@ -9,14 +9,16 @@ public class ChatClient {
 
     private Socket clientSocket;
     String user;
+    boolean isConnected;
 
     private boolean isConnected() {
-        return false;
+        return isConnected;
     }
 
     public ChatClient(String host, int port, String user) {
         try {
             clientSocket = new Socket(host, port);
+            isConnected = true;
             this.user = user;
         } catch (IOException e) {
             e.printStackTrace();
@@ -43,6 +45,8 @@ public class ChatClient {
                     }
                     else if (data.equals("quit")) {
                         msg = new Message(Message.Type.QUIT, user, data);
+                        //temp measure to stop null print out after user types quit
+                        isConnected = false;
                         running = false;
                     }
                     else {
@@ -53,7 +57,7 @@ public class ChatClient {
                 }
 
                 // Add functionality to wait for server to close socket and permit exit
-                System.out.println("Program Terminated");
+                //System.out.println("Program Terminated");
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -61,13 +65,18 @@ public class ChatClient {
         }).start();
 
         new Thread(() -> {
+            //
             try {
                 BufferedReader serverIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                while (true) {
+                while (isConnected) {
+                    // Need to add check if the server has sent 'quit ok' message
+                    // If 'quit ok' message received, break loop and close the socket from client side
+                    // Currently client continues to print null after server has closed socket
                     String line = serverIn.readLine();
-                    System.out.println(line);
+                    if (line != null) {
+                        System.out.println(line);
+                    }
                 }
-
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -80,12 +89,12 @@ public class ChatClient {
     public static void main(String[] args) throws Exception {
         Options options = new Options();
 
-        Option host = new Option("h", "host", true, "IP address of server - if not entered, default of localhost will be assigned");
+        Option host = new Option("cca", "host", true, "IP address of server - if not entered, default of localhost will be assigned");
         host.setRequired(false);
 
         options.addOption(host);
 
-        Option port = new Option("p", "port", true, "connection port - if not entered, default of 14001 will be assigned");
+        Option port = new Option("csp", "port", true, "connection port - if not entered, default of 14001 will be assigned");
         port.setRequired(false);
         options.addOption(port);
 

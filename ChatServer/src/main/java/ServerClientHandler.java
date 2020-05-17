@@ -25,25 +25,31 @@ public class ServerClientHandler extends Thread {
         this.clientMessageQueue = cmq;
     }
 
-    // New thread
     //
     public void run() {
         try {
             System.out.println(user + " has connected on " + s);
             BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()));
 
+            // Stream to be sent from the server to the client across the socket
             new Thread(() -> {
                 try {
                     PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true);
                     while (true) {
                         Message message = clientMessageQueue.take();
-                        clientOut.println(user + ":  " + message.data);
-                    }
+                        if (message.data != null) {
+                            clientOut.println(user + ":  " + message.data);
+                        }
+                        else {
+                            clientOut.println("You are quitting the program");
+                        }
+                        }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
                 }
 
             }).start();
+
 
             String json;
             ObjectMapper mapMsg = new ObjectMapper ();
@@ -55,12 +61,13 @@ public class ServerClientHandler extends Thread {
                 System.out.println(user + ": " + json);
                 //Clients are able to end their session by entering "quit"
                 if (message.messageType.equals(Message.Type.QUIT)) {
-                //if (data.equals("quit")) {
                     System.out.println("Session ending for " + user);
                     break;
                 }
                 mp.processMessage(message);
+
             }
+
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -69,6 +76,7 @@ public class ServerClientHandler extends Thread {
         } finally {
             try {
                 this.s.close();
+
                 System.out.println("Closed: " + s);
             } catch (IOException e) {
                 System.out.println("Error closing socket for " + user);
