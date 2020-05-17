@@ -1,7 +1,11 @@
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.cli.*;
 
@@ -10,6 +14,7 @@ public class ChatClient {
     private Socket clientSocket;
     String user;
     boolean isConnected;
+    public Map<Integer, String> map = new HashMap<Integer, String>();
 
     private boolean isConnected() {
         return isConnected;
@@ -25,23 +30,35 @@ public class ChatClient {
         }
     }
 
+    private void sendLoginMessage(PrintWriter serverOut, ObjectMapper mapper) throws JsonProcessingException {
+        Message msg = new Message(Message.Type.LOGIN, user, "");
+        serverOut.println(mapper.writeValueAsString(msg));
+    }
+
     public void connect() {
 
+        //Sending
         new Thread(() -> {
             ObjectMapper mapMsg = new ObjectMapper();
             try {
                 BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in));
                 PrintWriter serverOut = new PrintWriter(clientSocket.getOutputStream(), true);
+                sendLoginMessage(serverOut, mapMsg);
                 boolean running = true;
-                while (running) {
-                    String data = userIn.readLine() ;
+                while (running && isConnected) {
+                    String data = userIn.readLine();
                     Message msg;
                     if (data.startsWith("@")) {
-                        //get the following username
                         //Add to the message recipient field
                         //set message type to private
 
-                        msg = new Message(Message.Type.PRIVATE, user, data);
+                        int spaceIndex = data.indexOf(' ');
+                        String recipientUsername = data.substring(1, spaceIndex);
+                        String prvMsg = data.substring(spaceIndex+1);
+
+                        msg = new Message(Message.Type.PRIVATE, user, prvMsg);
+                        msg.recipientUsername = recipientUsername;
+
                     }
                     else if (data.equals("quit")) {
                         msg = new Message(Message.Type.QUIT, user, data);
@@ -53,6 +70,7 @@ public class ChatClient {
                         msg = new Message(Message.Type.BROADCAST, user, data);
                     }
                     String json = mapMsg.writeValueAsString(msg);
+                    //Need to add recipient username here if private message
                     serverOut.println(json);
                 }
 
@@ -64,6 +82,7 @@ public class ChatClient {
             }
         }).start();
 
+        //Receiving
         new Thread(() -> {
             //
             try {
@@ -75,6 +94,11 @@ public class ChatClient {
                     String line = serverIn.readLine();
                     if (line != null) {
                         System.out.println(line);
+                    }
+                    else {
+                        clientSocket.close();
+                        System.out.println("Server socket has been closed. Client socket now also closed");
+                        break;
                     }
                 }
             } catch (IOException e) {

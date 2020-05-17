@@ -2,25 +2,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.file.Files;
 import java.time.Instant;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 
 // Allows multiple clients to connect
 public class ServerClientHandler extends Thread {
-    private Socket s;
-    private String user;
-    private MessageProcessor mp;
-    private int id;
-    BlockingQueue<Message> clientMessageQueue;
+    private final Socket s;
+    private final int clientID;
+    private final MessageProcessor mp;
+    private final BlockingQueue<Message> clientMessageQueue;
 
 
     //
-    public ServerClientHandler(Socket s, String u, int id, MessageProcessor mp, BlockingQueue<Message> cmq) {
+    public ServerClientHandler(int clientID, Socket s, MessageProcessor mp, BlockingQueue<Message> cmq) {
+        this.clientID = clientID;
         this.s = s;
-        this.user = u;
-        this.id = id;
         this.mp = mp;
         this.clientMessageQueue = cmq;
     }
@@ -28,46 +24,37 @@ public class ServerClientHandler extends Thread {
     //
     public void run() {
         try {
-            System.out.println(user + " has connected on " + s);
-            BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()));
+//            System.out.println(user + " has connected on " + s);
 
+
+            //Sending to client
             // Stream to be sent from the server to the client across the socket
             new Thread(() -> {
                 try {
                     PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true);
                     while (true) {
                         Message message = clientMessageQueue.take();
-                        if (message.data != null) {
-                            clientOut.println(user + ":  " + message.data);
-                        }
-                        else {
-                            clientOut.println("You are quitting the program");
-                        }
-                        }
+                        clientOut.println(message.senderUsername + ":  " + message.data);
+                        //TODO: Need to break out of this loop
+                    }
                 } catch (IOException | InterruptedException e) {
                     e.printStackTrace();
                 }
 
             }).start();
 
-
+            BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()));
             String json;
-            ObjectMapper mapMsg = new ObjectMapper ();
+            ObjectMapper mapMsg = new ObjectMapper();
 
+            //Receiving from client
             while ((json = clientIn.readLine()) != null) {
                 Message message = mapMsg.readValue(json, Message.class);
                 message.arrivalTime = Instant.now();
-                message.id = id;
-                System.out.println(user + ": " + json);
-                //Clients are able to end their session by entering "quit"
-                if (message.messageType.equals(Message.Type.QUIT)) {
-                    System.out.println("Session ending for " + user);
-                    break;
-                }
-                mp.processMessage(message);
-
+                //Prints out to the server console
+//                System.out.println(user + ": " + json);
+                mp.processMessage(clientID, message);
             }
-
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -79,7 +66,7 @@ public class ServerClientHandler extends Thread {
 
                 System.out.println("Closed: " + s);
             } catch (IOException e) {
-                System.out.println("Error closing socket for " + user);
+                System.out.println("Error closing socket for " + clientID);
 
             }
 

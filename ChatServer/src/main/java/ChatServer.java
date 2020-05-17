@@ -11,7 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class ChatServer extends Thread implements MessageProcessor {
 
     private ServerSocket in;
-    private int i;
+    private Map<String, Integer> userNameMap = new HashMap<>();
     private Map<Integer, Queue<Message>> messageQueueMap = new HashMap<>();
     private Boolean exit;
 
@@ -19,7 +19,6 @@ public class ChatServer extends Thread implements MessageProcessor {
     public ChatServer(int port) {
         try {
             in = new ServerSocket(port);
-            i = 0;
             exit = false;
 
             //creating new thread to listen for "exit" on server
@@ -47,33 +46,35 @@ public class ChatServer extends Thread implements MessageProcessor {
     }
 
     // Method to retrieve message from ServerClientHandler and add to message store
-    public synchronized void processMessage(Message message) {
+    public synchronized void processMessage(int clientID, Message message) {
         // check the message Type
         Message.Type type = message.messageType;
-        if (type == Message.Type.QUIT) {
-            // call new method to close client socket
-        } else if (type == Message.Type.PRIVATE) {
-            // Get the id of the intended recipient and add message to their queue only
-            int recipient = message.id;
-            Queue<Message> recipientQueue = messageQueueMap.get(recipient);
-            if (recipientQueue != null) {
-                recipientQueue.add(message);
-            }
-            // if private, use username to find client id, then add to this client's message queue
-        } else if (type == Message.Type.BROADCAST) {
-            // Iterate through queues to check that message id does not equal id of message store before adding to list
-            for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
-                if (!queueEntry.getKey().equals(message.id)) {
-                    queueEntry.getValue().add(message);
+        switch (type) {
+            case QUIT:
+                System.out.println("Session ending for " + message.senderUsername);
+                messageQueueMap.remove(clientID);
+                break;
+            case PRIVATE:
+                String recipient = message.recipientUsername;
+                int recipientID = userNameMap.get(recipient);
+                Queue<Message> recipientQueue = messageQueueMap.get(recipientID);
+                if (recipientQueue != null) {
+                    recipientQueue.add(message);
                 }
-
-            }
-            // if broadcast , add to all other clients' queues apart from the sender's
-
-
-            //System.out.println(message.arrivalTime.toString() + " " + message.data);
-            //message.messageType.equals(Message.Type.BROADCAST
+                break;
+            case BROADCAST:
+                // Iterate through queues to check that message id does not equal id of message store before adding to list
+                for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
+                    if (!queueEntry.getKey().equals(clientID)) {
+                        queueEntry.getValue().add(message);
+                    }
+                }
+                break;
+            case LOGIN:
+                userNameMap.put(message.senderUsername, clientID);
+                break;
         }
+
     }
 
     //thread safe: blocks multiple threads accessing it at same time
@@ -85,14 +86,15 @@ public class ChatServer extends Thread implements MessageProcessor {
     // Creating a new ServerClientHandler for each new client and assigning Client number
     //
     public void run() {
+        int currentID = 0;
         try {
             while (!getExit()) {
                 Socket s = in.accept();
                 BlockingQueue<Message> broadcastQueue = new LinkedBlockingQueue<>();
-                ServerClientHandler c = new ServerClientHandler(s, "Client " + i, i, this, broadcastQueue);
-                messageQueueMap.put(i, broadcastQueue);
+                ServerClientHandler c = new ServerClientHandler(currentID, s,this, broadcastQueue);
+                messageQueueMap.put(currentID, broadcastQueue);
                 c.start();
-                i++;
+                currentID++;
             }
 
         } catch (IOException e) {

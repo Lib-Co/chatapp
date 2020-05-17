@@ -1,3 +1,3 @@
 public interface MessageProcessor {
-    void processMessage(Message message);
+    void processMessage(int clientID, Message message);
 }
