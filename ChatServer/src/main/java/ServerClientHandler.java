@@ -24,10 +24,6 @@ public class ServerClientHandler extends Thread {
     //
     public void run() {
         try {
-//            System.out.println(user + " has connected on " + s);
-
-
-            //Sending to client
             // Stream to be sent from the server to the client across the socket
             new Thread(() -> {
                 try {
@@ -63,13 +59,10 @@ public class ServerClientHandler extends Thread {
         } finally {
             try {
                 this.s.close();
-
                 System.out.println("Closed: " + s);
             } catch (IOException e) {
                 System.out.println("Error closing socket for " + clientID);
-
             }
-
         }
     }
 }

@@ -3,9 +3,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.commons.cli.*;
 
@@ -14,7 +11,6 @@ public class ChatClient {
     private Socket clientSocket;
     String user;
     boolean isConnected;
-    public Map<Integer, String> map = new HashMap<Integer, String>();
 
     private boolean isConnected() {
         return isConnected;
@@ -36,7 +32,6 @@ public class ChatClient {
     }
 
     public void connect() {
-
         //Sending
         new Thread(() -> {
             ObjectMapper mapMsg = new ObjectMapper();
@@ -96,8 +91,9 @@ public class ChatClient {
                         System.out.println(line);
                     }
                     else {
-                        clientSocket.close();
-                        System.out.println("Server socket has been closed. Client socket now also closed");
+                        if(clientSocket.isConnected()){
+                            clientSocket.close();
+                        }
                         break;
                     }
                 }

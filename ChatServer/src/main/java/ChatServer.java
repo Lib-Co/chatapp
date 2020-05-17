@@ -15,7 +15,6 @@ public class ChatServer extends Thread implements MessageProcessor {
     private Map<Integer, Queue<Message>> messageQueueMap = new HashMap<>();
     private Boolean exit;
 
-
     public ChatServer(int port) {
         try {
             in = new ServerSocket(port);
@@ -28,7 +27,6 @@ public class ChatServer extends Thread implements MessageProcessor {
                     while (true) {
                         String in = userIn.readLine();
                         if (in.equals("EXIT")) {
-                            //or can add synchronized block
                             System.out.println(("Server commencing exit"));
                             synchronized (exit) {
                                 exit = true;
@@ -55,6 +53,7 @@ public class ChatServer extends Thread implements MessageProcessor {
                 messageQueueMap.remove(clientID);
                 break;
             case PRIVATE:
+                System.out.println(message.senderUsername + ": " + message.data);
                 String recipient = message.recipientUsername;
                 int recipientID = userNameMap.get(recipient);
                 Queue<Message> recipientQueue = messageQueueMap.get(recipientID);
@@ -63,6 +62,7 @@ public class ChatServer extends Thread implements MessageProcessor {
                 }
                 break;
             case BROADCAST:
+                System.out.println(message.senderUsername + ": " + message.data);
                 // Iterate through queues to check that message id does not equal id of message store before adding to list
                 for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
                     if (!queueEntry.getKey().equals(clientID)) {
@@ -72,6 +72,7 @@ public class ChatServer extends Thread implements MessageProcessor {
                 break;
             case LOGIN:
                 userNameMap.put(message.senderUsername, clientID);
+                System.out.println(message.senderUsername + " has connected successfully");
                 break;
         }
 
@@ -79,6 +80,10 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     //thread safe: blocks multiple threads accessing it at same time
     public synchronized boolean getExit() {
+//        Message exitNotify = new Message(Message.Type.BROADCAST, "ChatApp", "Server is shutting down, your connection will be closed shortly");
+//        for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
+//            queueEntry.getValue().add(exitNotify);
+//        }
         return exit;
     }
 
@@ -91,7 +96,7 @@ public class ChatServer extends Thread implements MessageProcessor {
             while (!getExit()) {
                 Socket s = in.accept();
                 BlockingQueue<Message> broadcastQueue = new LinkedBlockingQueue<>();
-                ServerClientHandler c = new ServerClientHandler(currentID, s,this, broadcastQueue);
+                ServerClientHandler c = new ServerClientHandler(currentID, s, this, broadcastQueue);
                 messageQueueMap.put(currentID, broadcastQueue);
                 c.start();
                 currentID++;
