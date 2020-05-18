@@ -11,7 +11,6 @@ public class Message {
     public Message.Type messageType;
     public String senderUsername;
     public String data;
-    public Instant arrivalTime;
     public String recipientUsername;
     public String tag;
 

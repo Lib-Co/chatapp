@@ -13,6 +13,7 @@ public class ServerClientHandler extends Thread {
     private final MessageProcessor mp;
     private final BlockingQueue<Message> clientMessageQueue;
     private volatile boolean exit = true;
+    private int serverRunning;
 
 
     // New server client handler is created when a new client connects
@@ -26,21 +27,17 @@ public class ServerClientHandler extends Thread {
 
 
     public void run() {
+        ObjectMapper mapMsg = new ObjectMapper();
 
+        //Listening for messages added to the client's message queue
         new Thread(() -> {
             try (PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true)) {
                 while (!mp.getExit()) {
                     Message message = clientMessageQueue.poll(10, TimeUnit.MILLISECONDS);
                     if (message != null) {
-                        Message.Type type = message.messageType;
-                        switch (type) {
-                            case BROADCAST:
-                                clientOut.println(message.senderUsername + ":  " + message.data);
-                                break;
-                            case PRIVATE:
-                                clientOut.println(message.senderUsername + message.tag + " : " + message.data);
-                                break;
-                        }
+
+                        String json = mapMsg.writeValueAsString(message);
+                        clientOut.println(json);
                     }
                 }
                 // If server exit is initialised, the server client handler will close socket
@@ -50,19 +47,18 @@ public class ServerClientHandler extends Thread {
             }
         }).start();
 
-        //String to be sent from the server to the client across the socket
+        String json;
+        //String to be sent to the server from the client across the socket
         try (BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()))) {
-            String json;
-            ObjectMapper mapMsg = new ObjectMapper();
 
             //Receiving from client
             while ((json = clientIn.readLine()) != null) {
                 Message message = mapMsg.readValue(json, Message.class);
-                message.arrivalTime = Instant.now();
                 mp.processMessage(clientID, message);
             }
         } catch (SocketException e) {
-            System.out.println("CLIENT " + this.clientID +  " DISCONNECTED");
+            //System.out.println("CLIENT " + this.clientID +  " DISCONNECTED");
+            System.out.println("null from client");
         } catch (IOException e) {
             e.printStackTrace();
 
@@ -75,7 +71,6 @@ public class ServerClientHandler extends Thread {
                 System.out.println("Error closing socket for " + clientID);
 
             }
-
         }
     }
 }

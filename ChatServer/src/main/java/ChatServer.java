@@ -98,6 +98,8 @@ public class ChatServer extends Thread implements MessageProcessor {
     // Creating a new ServerClientHandler for each new client and assigning Client number
     public void run() {
         int currentID = 0;
+        int serverRunning = 1;
+
         try {
             while (!exit) {
                 Socket s = in.accept();
