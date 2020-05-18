@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.cli.*;
 
@@ -60,8 +61,7 @@ public class ChatClient {
                         int spaceIndex = data.indexOf(' ');
                         String recipientUsername = data.substring(1, spaceIndex);
                         String prvMsg = data.substring(spaceIndex+1);
-
-                        //Create a private message and
+                        //Create a private message and add tag for client to indicate that they received a private message
                         msg = new Message(Message.Type.PRIVATE, user, prvMsg);
                         msg.recipientUsername = recipientUsername;
                         msg.tag = "[private]";
@@ -124,10 +124,12 @@ public class ChatClient {
 
     }
 
-    public List<String> botMsg = new ArrayList<>(Arrays.asList("Hello", "How are you?", "It's cold", "I don't understand", "Oh really?", "Nice to meet you", "The end"));
+    public List<String> botMsg = new ArrayList<>(Arrays.asList(" Hello", " How are you?", " It's cold", " I don't understand", " Oh really?", " Nice to meet you", "  The end"));
 
     private void generateMessage(Message message) {
-        botPrintWriter.println("@" + message.senderUsername + " Bot message");
+        Random rand = new Random();
+        String randomMsg = botMsg.get(rand.nextInt(botMsg.size()));
+        botPrintWriter.println("@" + message.senderUsername + randomMsg);
     }
 
     public static void main(String[] args) throws Exception {
