@@ -96,7 +96,6 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     // Accepting clients
     // Creating a new ServerClientHandler for each new client and assigning Client number
-    //
     public void run() {
         int currentID = 0;
         try {

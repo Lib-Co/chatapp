@@ -13,6 +13,7 @@ public class Message {
     public String data;
     public Instant arrivalTime;
     public String recipientUsername;
+    public String tag;
 
     public Message(Message.Type messageType, String senderUsername, String data) {
         this.messageType = messageType;

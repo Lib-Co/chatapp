@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-// Allows multiple clients to connect
 public class ServerClientHandler extends Thread {
     private final Socket s;
     private final int clientID;
@@ -16,7 +15,8 @@ public class ServerClientHandler extends Thread {
     private volatile boolean exit = true;
 
 
-    //
+    // New server client handler is created when a new client connects
+    // Handle
     public ServerClientHandler(int clientID, Socket s, MessageProcessor mp, BlockingQueue<Message> cmq) {
         this.clientID = clientID;
         this.s = s;
@@ -32,19 +32,26 @@ public class ServerClientHandler extends Thread {
                 while (!mp.getExit()) {
                     Message message = clientMessageQueue.poll(10, TimeUnit.MILLISECONDS);
                     if (message != null) {
-                        clientOut.println(message.senderUsername + ":  " + message.data);
+                        Message.Type type = message.messageType;
+                        switch (type) {
+                            case BROADCAST:
+                                clientOut.println(message.senderUsername + ":  " + message.data);
+                                break;
+                            case PRIVATE:
+                                clientOut.println(message.senderUsername + message.tag + " : " + message.data);
+                                break;
+                        }
                     }
                 }
-                //close socket
+                // If server exit is initialised, the server client handler will close socket
                 s.close();
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         }).start();
 
+        //String to be sent from the server to the client across the socket
         try (BufferedReader clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()))) {
-            //Sending to client
-            // Stream to be sent from the server to the client across the socket
             String json;
             ObjectMapper mapMsg = new ObjectMapper();
 
@@ -52,8 +59,6 @@ public class ServerClientHandler extends Thread {
             while ((json = clientIn.readLine()) != null) {
                 Message message = mapMsg.readValue(json, Message.class);
                 message.arrivalTime = Instant.now();
-                //Prints out to the server console
-//                System.out.println(user + ": " + json);
                 mp.processMessage(clientID, message);
             }
         } catch (SocketException e) {
@@ -61,7 +66,7 @@ public class ServerClientHandler extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
 
-            // Close the socket
+        //Close the socket
         } finally {
             try {
                 this.s.close();

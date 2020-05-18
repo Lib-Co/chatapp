@@ -39,32 +39,30 @@ public class ChatClient {
                     String data = userIn.readLine();
                     Message msg;
                     if (data.startsWith("@")) {
-                        //Add to the message recipient field
-                        //set message type to private
-
+                        //Removing the @ character (required format of a private message)
                         int spaceIndex = data.indexOf(' ');
                         String recipientUsername = data.substring(1, spaceIndex);
                         String prvMsg = data.substring(spaceIndex+1);
 
+                        //Create a private message and
                         msg = new Message(Message.Type.PRIVATE, user, prvMsg);
                         msg.recipientUsername = recipientUsername;
+                        msg.tag = "[private]";
+                        //TODO: add tag for private messages
 
                     }
                     else if (data.equals("quit")) {
                         msg = new Message(Message.Type.QUIT, user, data);
-                        //temp measure to stop null print out after user types quit
                         isConnected = false;
+                        int exitStatus = isConnected ? 1 : 0;
+                        System.exit(exitStatus);
                     }
                     else {
                         msg = new Message(Message.Type.BROADCAST, user, data);
                     }
                     String json = mapMsg.writeValueAsString(msg);
-                    //Need to add recipient username here if private message
                     serverOut.println(json);
                 }
-
-                // Add functionality to wait for server to close socket and permit exit
-                //System.out.println("Program Terminated");
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -77,17 +75,13 @@ public class ChatClient {
             try {
                 BufferedReader serverIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 while (isConnected) {
-                    // Need to add check if the server has sent 'quit ok' message
-                    // If 'quit ok' message received, break loop and close the socket from client side
-                    // Currently client continues to print null after server has closed socket
                     String line = serverIn.readLine();
                     if (line != null) {
                         System.out.println(line);
                     }
                     else {
-                        if(clientSocket.isConnected()){
-                            clientSocket.close();
-                        }
+                        clientSocket.close();
+                        System.out.println("Client socket closed");
                         break;
                     }
                 }
