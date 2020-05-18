@@ -8,6 +8,8 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.cli.*;
+
 
 public class ChatServer extends Thread implements MessageProcessor {
 
@@ -20,8 +22,7 @@ public class ChatServer extends Thread implements MessageProcessor {
     public ChatServer(int port) {
         try {
             in = new ServerSocket(port);
-
-            //creating new thread to listen for "exit" on server
+            //Thread to listen for "exit" on server
             new Thread(() -> {
                 try (BufferedReader userIn = new BufferedReader(new InputStreamReader(System.in))) {
                     while (true) {
@@ -45,9 +46,9 @@ public class ChatServer extends Thread implements MessageProcessor {
         return exit;
     }
 
-    // Method to retrieve message from ServerClientHandler and add to message store
+    //Process messages from client based on message type
     public synchronized void processMessage(int clientID, Message message) {
-        // check the message Type
+        //Check the message type and add to client queues as required
         Message.Type type = message.messageType;
         switch (type) {
             case QUIT:
@@ -57,9 +58,9 @@ public class ChatServer extends Thread implements MessageProcessor {
             case PRIVATE:
                 System.out.println(message.senderUsername + ": " + message.data);
                 String recipient = message.recipientUsername;
+                //Check if intended recipient exists
                 if (!userNameMap.containsKey(recipient)) {
                     System.out.println("Specified user is not connected to server. Cannot send message.");
-                    //TODO: send this to client
                     break;
                 }
                 int recipientID = userNameMap.get(recipient);
@@ -70,7 +71,8 @@ public class ChatServer extends Thread implements MessageProcessor {
                 break;
             case BROADCAST:
                 System.out.println(message.senderUsername + ": " + message.data);
-                // Iterate through queues to check that message id does not equal id of message store before adding to list
+                //Iterate through queues to check that client id of the sender does not equal id of the message queue before adding message
+                //Ensures senders do not receive their own messages as echos from the server
                 for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
                     if (!queueEntry.getKey().equals(clientID)) {
                         queueEntry.getValue().add(message);
@@ -85,25 +87,14 @@ public class ChatServer extends Thread implements MessageProcessor {
 
     }
 
-//    private void notifyExit() throws IOException {
-//        exit = true;
-//        Message exitNotify = new Message(Message.Type.BROADCAST, "ChatApp", "Server is shutting down, your connection will be closed shortly");
-//        for (Map.Entry<Integer, Queue<Message>> queueEntry : messageQueueMap.entrySet()) {
-//            queueEntry.getValue().add(exitNotify);
-//        }
-//        in.close();
-//    }
-
     public void exit() throws IOException {
         exit = true;
         in.close();
     }
 
-    // Accepting clients
-    // Creating a new ServerClientHandler for each new client and assigning Client number
+    //Accepting clients and creating a new ServerClientHandler for each new client with unique client ID
     public void run() {
         int currentID = 0;
-        int serverRunning = 1;
 
         try {
             while (!exit) {
@@ -122,17 +113,29 @@ public class ChatServer extends Thread implements MessageProcessor {
         }
     }
 
+    //Optional parameters. Please see README.md for details
     public static void main(String[] args) {
-        new ChatServer(14001).start();
+        Options options = new Options();
+
+        Option port = new Option("csp", "port", true, "Connection port - if not entered, default of 14001 will be assigned");
+        options.addOption(port);
+
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd;
+
+        try {
+            cmd = parser.parse(options, args);
+            int portArg = Integer.parseInt(cmd.getOptionValue("port", "14001"));
+
+            new ChatServer(portArg).start();
+
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("ChatClient", options);
+            // Exit the program if cmd line arguments are not entered correctly
+            System.exit(1);
+        }
     }
 }
 
-
-// need to enter exit on server side to shut down all client connections cleanly
-// exit cmd will be entered here
-// inform clients that server is shutting down + close all sockets
-// clients will need to listen for this message, so can close socket from client side as well
-// use try and catch first to ensure clean exit
-// could use System.exit as final termination
-
-// ** also need to remove clients from broadcast lists if their programs crash ans client leaves without netering "quit"

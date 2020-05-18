@@ -23,5 +23,4 @@ public class Message {
     public Message() {
         //Empty constructor for Jackson objects
     }
-
 }

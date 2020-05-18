@@ -24,10 +24,11 @@ public class ChatClient {
             clientSocket = new Socket(host, port);
             isConnected = true;
             this.user = user;
+            //Normal clients read from stdin, while chatbot clients use an alternative InputStream
             if (isBot) {
                 this.isBot = true;
                 inputStream = new PipedInputStream();
-                PipedOutputStream outputStream = new PipedOutputStream((PipedInputStream)inputStream);
+                PipedOutputStream outputStream = new PipedOutputStream((PipedInputStream) inputStream);
                 botPrintWriter = new PrintWriter(outputStream, true);
             } else {
                 inputStream = System.in;
@@ -47,7 +48,7 @@ public class ChatClient {
 
     public void connect() {
         ObjectMapper mapMsg = new ObjectMapper();
-        //Sending
+        //Sending messages to the server
         new Thread(() -> {
             try {
                 BufferedReader userIn = new BufferedReader(new InputStreamReader(inputStream));
@@ -57,7 +58,7 @@ public class ChatClient {
                     String data = userIn.readLine();
                     Message msg;
                     if (data.startsWith("@")) {
-                        //Removing the @ character (required format of a private message)
+                        //Removing the @ character (required format of a private message) in order to read recipient username
                         int spaceIndex = data.indexOf(' ');
                         if (spaceIndex != -1 && spaceIndex + 1 < data.length()) {
                             String recipientUsername = data.substring(1, spaceIndex);
@@ -88,15 +89,15 @@ public class ChatClient {
             }
         }).start();
 
-        //Receiving
+        //Receiving messages from the server
         new Thread(() -> {
-            //
             try {
                 BufferedReader serverIn = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 while (isConnected) {
                     String json = serverIn.readLine();
                     if (json != null) {
                         Message message = mapMsg.readValue(json, Message.class);
+                        //Chatbots will retrieve pre-scripted messages from the botMsg list
                         if (isBot && message.messageType == Message.Type.PRIVATE) {
                             generateMessage(message);
                         }
@@ -106,18 +107,15 @@ public class ChatClient {
                             case BROADCAST:
                                 output = message.senderUsername + ":  " + message.data;
                                 break;
+                            //Private messages will display a tag to indicate to the recipient
                             case PRIVATE:
-                                output = message.senderUsername + message.tag + " : " + message.data;
+                                output = message.senderUsername + " " + message.tag + ": " + message.data;
                                 break;
                         }
                         if (output != null) {
                             System.out.println(output);
                         }
-                    }
-
-                    else {
-                        //clientSocket.close();
-                        //System.out.println("Server is offline. Client socket is now closed");
+                    } else {
                         break;
                     }
                 }
@@ -126,9 +124,9 @@ public class ChatClient {
             }
 
         }).start();
-
     }
 
+    //Pre-scripted messages for chatbots
     public List<String> botMsg = new ArrayList<>(Arrays.asList(" Hello", " How are you?", " It's cold", " I don't understand", " Oh really?", " Nice to meet you", "  The end"));
 
     private void generateMessage(Message message) {
@@ -137,23 +135,20 @@ public class ChatClient {
         botPrintWriter.println("@" + message.senderUsername + randomMsg);
     }
 
-    public static void main(String[] args) throws Exception {
+    //Optional parameters. Please see README.md for details
+    public static void main(String[] args) {
         Options options = new Options();
 
         Option host = new Option("cca", "host", true, "IP address of server - if not entered, default of localhost will be assigned");
-        host.setRequired(false);
         options.addOption(host);
 
-        Option port = new Option("csp", "port", true, "Connection port - if not entered, default of 14001 will be assigned");
-        port.setRequired(false);
+        Option port = new Option("ccp", "port", true, "Connection port - if not entered, default of 14001 will be assigned");
         options.addOption(port);
 
         Option user = new Option("u", "user", true, "Username selection - this is required to make a connection. Usernames must be unique");
-        user.setRequired(true);
         options.addOption(user);
 
         Option chatbot = new Option("cb", "chatbot", false, "Add chatbot to session - if not entered, default of no chatbot is assigned");
-        chatbot.setRequired(false);
         options.addOption(chatbot);
 
 
@@ -164,8 +159,8 @@ public class ChatClient {
         try {
             cmd = parser.parse(options, args);
             String hostArg = cmd.getOptionValue("host", "localhost");
-            int portArg = Integer.parseInt(cmd.getOptionValue("port","14001"));
-            String userArg = cmd.getOptionValue("user");
+            int portArg = Integer.parseInt(cmd.getOptionValue("port", "14001"));
+            String userArg = cmd.getOptionValue("user", "DefaultUser");
             boolean isBot = false;
             if (cmd.hasOption("chatbot")) {
                 isBot = true;
@@ -179,12 +174,6 @@ public class ChatClient {
             // Exit the program if cmd line arguments are not entered correctly
             System.exit(1);
         }
-
     }
-
 }
 
-
-
-// closing the client cleanly = terminal input "quit"
-// need to tell server so server gets rid of the connection to close socket
