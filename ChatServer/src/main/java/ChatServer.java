@@ -57,6 +57,11 @@ public class ChatServer extends Thread implements MessageProcessor {
             case PRIVATE:
                 System.out.println(message.senderUsername + ": " + message.data);
                 String recipient = message.recipientUsername;
+                if (!userNameMap.containsKey(recipient)) {
+                    System.out.println("Specified user is not connected to server. Cannot send message.");
+                    //TODO: send this to client
+                    break;
+                }
                 int recipientID = userNameMap.get(recipient);
                 Queue<Message> recipientQueue = messageQueueMap.get(recipientID);
                 if (recipientQueue != null) {

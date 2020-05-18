@@ -59,20 +59,24 @@ public class ChatClient {
                     if (data.startsWith("@")) {
                         //Removing the @ character (required format of a private message)
                         int spaceIndex = data.indexOf(' ');
-                        String recipientUsername = data.substring(1, spaceIndex);
-                        String prvMsg = data.substring(spaceIndex+1);
-                        //Create a private message and add tag for client to indicate that they received a private message
-                        msg = new Message(Message.Type.PRIVATE, user, prvMsg);
-                        msg.recipientUsername = recipientUsername;
-                        msg.tag = "[private]";
-                    }
-                    else if (data.equals("quit")) {
+                        if (spaceIndex != -1 && spaceIndex + 1 < data.length()) {
+                            String recipientUsername = data.substring(1, spaceIndex);
+                            String prvMsg = data.substring(spaceIndex + 1);
+                            //Create a private message and add tag for client to indicate that they received a private message
+                            msg = new Message(Message.Type.PRIVATE, user, prvMsg);
+                            msg.recipientUsername = recipientUsername;
+                            msg.tag = "[private]";
+                        } else {
+                            System.out.println("Private message is invalid because it is empty. Please use a space after the username and type a message.");
+                            continue;
+                        }
+
+                    } else if (data.equals("quit")) {
                         msg = new Message(Message.Type.QUIT, user, data);
                         isConnected = false;
                         int exitStatus = isConnected ? 1 : 0;
                         System.exit(exitStatus);
-                    }
-                    else {
+                    } else {
                         msg = new Message(Message.Type.BROADCAST, user, data);
                     }
                     String json = mapMsg.writeValueAsString(msg);
@@ -110,9 +114,10 @@ public class ChatClient {
                             System.out.println(output);
                         }
                     }
+
                     else {
-                        clientSocket.close();
-                        System.out.println("Server is offline. Client socket is now closed");
+                        //clientSocket.close();
+                        //System.out.println("Server is offline. Client socket is now closed");
                         break;
                     }
                 }

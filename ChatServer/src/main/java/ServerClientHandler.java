@@ -28,14 +28,12 @@ public class ServerClientHandler extends Thread {
 
     public void run() {
         ObjectMapper mapMsg = new ObjectMapper();
-
-        //Listening for messages added to the client's message queue
+        //Thread to listen for messages sent by clients
         new Thread(() -> {
             try (PrintWriter clientOut = new PrintWriter(s.getOutputStream(), true)) {
                 while (!mp.getExit()) {
                     Message message = clientMessageQueue.poll(10, TimeUnit.MILLISECONDS);
                     if (message != null) {
-
                         String json = mapMsg.writeValueAsString(message);
                         clientOut.println(json);
                     }
@@ -57,8 +55,7 @@ public class ServerClientHandler extends Thread {
                 mp.processMessage(clientID, message);
             }
         } catch (SocketException e) {
-            //System.out.println("CLIENT " + this.clientID +  " DISCONNECTED");
-            System.out.println("null from client");
+            System.out.println("CLIENT " + this.clientID +  " DISCONNECTED");
         } catch (IOException e) {
             e.printStackTrace();
 
